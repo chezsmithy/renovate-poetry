@@ -1,9 +1,63 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "branchPrefix": "renovate-",
+  "osvVulnerabilityAlerts": true,
   "extends": [
-    "config:recommended"
+    "group:allNonMajor",
+    "config:recommended",
+    "docker:enableMajor",
+    "regexManagers:dockerfileVersions",
+    "schedule:weekly",
+    ":maintainLockFilesMonthly",
+    ":label(renovate)",
+    ":separateMajorReleases",
+    ":preserveSemverRanges",
+    ":semanticCommitsDisabled"
   ],
+  "registryAliases": { "artifactory.cambiahealth.com":"cambiahealth.jfrog.io" },
   "packageRules": [
+    {
+      "matchDatasources": [
+        "clojure",
+        "maven",
+        "gradle"
+      ],
+      "registryUrls": [
+        "https://cambiahealth.jfrog.io/artifactory/libs"
+      ]
+    },
+    {
+      "matchDatasources": [
+        "nuget"
+      ],
+      "registryUrls": [
+        "https://cambiahealth.jfrog.io/artifactory/api/nuget/nuget"
+      ]
+    },
+    {
+      "matchDatasources": [
+        "npm"
+      ],
+      "registryUrls": [
+        "https://cambiahealth.jfrog.io/artifactory/api/npm/npm"
+      ]
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchDatasources": [
+        "github-releases"
+      ],
+      "registryUrls": [
+        "https://github.com"
+      ]
+    },
+    {
+      "groupName": "hapi fhir",
+      "matchPackagePrefixes": ["ca.uhn.hapi.fhir:"]
+    },
     {
       "description": "replace deprecated go1.x lambda with provided.al2",
       "matchDatasources": "custom.aws-lambda",
@@ -47,8 +101,8 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Updates aws lambda Versions in custom platform appspec",
-      "fileMatch": "platform-appspec.yml",
+      "description": "Updates aws lambda Versions in juno platform appspec",
+      "fileMatch": "(^|/).*juno_appspec\\.yml$",
       "matchStrings": [
         "runtime:\\s*(?:'|\")(?<depName>go|provided\\.|java|python|nodejs|dotnetcore|dotnet)(?<currentValue>[a-z,0-9]*.[0-9,x]*)(?:'|\")"
       ],
@@ -65,5 +119,219 @@
         "{ \"releases\": $append($filter($,function($v) { $contains($v.cycle,'{{packageName}}') }).{ \"version\": (latest != '' ? latest : cycle) ~> $replace('{{packageName}}',''), \"releaseTimestamp\": $toMillis(releaseDate) ~> $fromMillis(), \"isDeprecated\": eol = false ? false : $toMillis(eol) <= $toMillis($now()), \"changelogUrl\": link, \"sourceUrl\": link },[]), \"homepage\": \"https://endoflife.date/aws-lambda\" }"
       ]
     }
+  },
+  "python": {
+    "registryUrls": ["https://cambiahealth.jfrog.io/artifactory/api/pypi/pypi/simple"]
+  },
+  "docker":{
+    "packageRules": [
+      {
+        "description": "tell renovate how to interpret versioning for cucumber-base image",
+        "matchPackageNames": [ "cambiahealth.jfrog.io/docker/janus/cucumber-base" ],
+        "versioning": "regex:^(?<major>\\d+)(\\.(?<minor>\\d+))?$"
+      },
+      {
+        "description": "tell renovate how to interpret versioning for janus base images using datestamp tags (e.g. 20230418_013249)",
+        "matchPackagePrefixes": ["cambiahealth.jfrog.io/docker/janus/"],
+        "excludePackageNames": [
+          "cambiahealth.jfrog.io/docker/janus/gateway-nginx-base",
+          "cambiahealth.jfrog.io/docker/janus/node-base",
+          "cambiahealth.jfrog.io/docker/janus/java11-base",
+          "cambiahealth.jfrog.io/docker/janus-localstack"
+        ],
+        "versioning": "regex:^(?<minor>[0-9]{8})_(?<patch>[0-9]{6})?$"
+      },
+      {
+        "description":  "tell renovate how to interpret versioning for janus base images using semantic versioning with prefix (e.g. janus-gateway-base-2.1.1)",
+        "matchPackageNames": [
+          "cambiahealth.jfrog.io/docker/janus/gateway-nginx-base",
+          "cambiahealth.jfrog.io/docker/janus/node-base",
+          "cambiahealth.jfrog.io/docker/janus/java11-base"
+        ],
+        "versioning": "regex:^(?<compatibility>.*)-(?<major>\\d+)(\\.(?<minor>\\d+)\\.(?<patch>\\d+))?$"
+      },
+      {
+        "managers": ["ansible","docker-compose", "dockerfile", "droneci", "kubernetes", "woodpecker"],
+        "pinDigests": true
+      },
+      {
+        "groupName": "all container minor, patch and digest dependencies",
+        "groupSlug": "container-minor-patch-digest",
+        "matchUpdateTypes": ["minor", "patch", "digest"],
+        "recreateClosed": true
+      },
+      {
+        "matchPackageNames": ["postgres"],
+        "allowedVersions": "<15.0.0"
+      },
+      {
+        "matchPackageNames": ["redis"],
+        "allowedVersions": "<7.0.0"
+      },
+      {
+        "matchPackageNames": ["elasticsearch"],
+        "allowedVersions": "<8.0.0"
+      },
+      {
+        "matchPackagePrefixes": ["git.cambiahealth.com:4567"],
+        "enabled": false
+      },
+      {
+        "matchPackageNames": ["cambiahealth.jfrog.io/docker/chp-common-node"],
+        "replacementName": "cambiahealth.jfrog.io/docker/node",
+        "replacementVersion": "18-bullseye"
+      },
+      {
+        "matchPackageNames": ["cambiahealth.jfrog.io/docker/node"],
+        "matchCurrentVersion": "/^12/",
+        "replacementName": "cambiahealth.jfrog.io/docker/node",
+        "replacementVersion": "18-bullseye"
+      },
+      {
+        "matchPackageNames": ["cambiahealth.jfrog.io/docker/node"],
+        "matchCurrentVersion": "/^14/",
+        "replacementName": "cambiahealth.jfrog.io/docker/node",
+        "replacementVersion": "18-bullseye"
+      },
+      {
+        "matchPackageNames": ["cambiahealth.jfrog.io/docker/node"],
+        "matchCurrentVersion": "/^16/",
+        "replacementName": "cambiahealth.jfrog.io/docker/node",
+        "replacementVersion": "18-bullseye"
+      },
+      {
+        "matchPackageNames": ["cambiahealth.jfrog.io/docker/openjdk"],
+        "matchCurrentVersion": "/^8/",
+        "replacementName": "cambiahealth.jfrog.io/docker/eclipse-temurin",
+        "replacementVersion": "8u352-b08-jdk"
+      },
+      {
+        "matchPackageNames": ["cambiahealth.jfrog.io/docker/openjdk"],
+        "matchCurrentVersion": "/^11/",
+        "replacementName": "cambiahealth.jfrog.io/docker/eclipse-temurin",
+        "replacementVersion": "11-jdk-jammy"
+      },
+      {
+        "matchPackageNames": ["cambiahealth.jfrog.io/docker/openjdk"],
+        "matchCurrentVersion": "/^17/",
+        "replacementName": "cambiahealth.jfrog.io/docker/eclipse-temurin",
+        "replacementVersion": "17-jdk-jammy"
+      },
+      {
+        "matchPackageNames": ["openjdk"],
+        "matchCurrentValue": "/^11-jre-slim/",
+        "replacementName": "cambiahealth.jfrog.io/docker/eclipse-temurin",
+        "replacementVersion": "11-jre-jammy"
+      },
+      {
+        "matchPackageNames": ["cambiahealth.jfrog.io/docker/adoptopenjdk/openjdk11/alpine-jre"],
+        "replacementName": "cambiahealth.jfrog.io/docker/eclipse-temurin",
+        "replacementVersion": "11-jre-jammy"
+      },
+      {
+        "matchPackageNames": ["cambiahealth.jfrog.io/docker/adoptopenjdk/openjdk11"],
+        "replacementName": "cambiahealth.jfrog.io/docker/eclipse-temurin",
+        "replacementVersion": "11-jdk-jammy"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-maven-jobrunner"],
+        "matchCurrentValue": "/^3.6-openjdk8-buster/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-java-jobrunner",
+        "replacementVersion": "8-jdk-bullseye"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-maven-jobrunner"],
+        "matchCurrentValue": "/^3.6-openjdk11-buster/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-java-jobrunner",
+        "replacementVersion": "11-jdk-bullseye"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-maven-jobrunner"],
+        "matchCurrentValue": "/^3.6-openjdk16-buster/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-java-jobrunner",
+        "replacementVersion": "17-jdk-bullseye"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-nodejs-jobrunner"],
+        "matchCurrentVersion": "/^12/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-nodejs-jobrunner",
+        "replacementVersion": "18-bullseye"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-nodejs-jobrunner"],
+        "matchCurrentVersion": "/^14/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-nodejs-jobrunner",
+        "replacementVersion": "18-bullseye"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-nodejs-jobrunner"],
+        "matchCurrentVersion": "/^16/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-nodejs-jobrunner",
+        "replacementVersion": "18-bullseye"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-python-jobrunner"],
+        "matchCurrentValue": "/^3.9-buster/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-python-jobrunner",
+        "replacementVersion": "3.11-bullseye"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-docker-jobrunner-buster"],
+        "matchCurrentValue": "/^buster/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-docker-jobrunner-buster",
+        "replacementVersion": "bullseye"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-docker"],
+        "matchCurrentValue": "/^19-dind/",
+        "replacementName": "cambiahealth.jfrog.io/docker/docker",
+        "replacementVersion": "20-dind"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-docker"],
+        "matchCurrentValue": "/^20-dind/",
+        "replacementName": "cambiahealth.jfrog.io/docker/docker",
+        "replacementVersion": "20-dind"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-common-iac"],
+        "matchCurrentValue": "/^junolatest/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-common-iac",
+        "replacementVersion": "v1",
+        "groupName": "don't use junolatest"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-junolite-jobrunner"],
+        "matchCurrentValue": "/^junolatest/",
+        "replacementName": "081606171748.dkr.ecr.us-west-2.amazonaws.com/chp-build-junolite-jobrunner",
+        "replacementVersion": "v1",
+        "groupName": "don't use junolatest"
+      },
+      {
+        "matchPackageNames": ["081606171748.dkr.ecr.us-west-.amazonaws.com/chp-common-debian"],
+        "versioning": "debian",
+        "matchCurrentValue": "/^buster/",
+        "replacementName": "cambiahealth.jfrog.io/docker/debian",
+        "replacementVersion": "bullseye"
+      }
+    ]
+  },
+  "gomod":{
+    "postUpdateOptions": [
+      "gomodTidy"
+    ]
+  },
+  "npmrc": "always-auth=true\nregistry=https://cambiahealth.jfrog.io/artifactory/api/npm/npm/\nstrict-ssl=false",
+  "npm": {
+    "extends": [
+      ":unpublishSafe"
+    ],
+    "rangeStrategy": "bump"
+  },
+  "pip_requirements": {
+    "fileMatch": ["(^|/)([\\w-]*)requirements\\.(txt|pip)$", "(^|/)([\\w-]*)requirements-.+\\.(txt|pip)$"]
+  },
+  "circleci": {
+    "fileMatch": ["(^|/).circleci/config.yml$"]
   }
 }
