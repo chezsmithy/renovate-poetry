@@ -1,0 +1,69 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "replace deprecated go1.x lambda with provided.al2",
+      "matchDatasources": "custom.aws-lambda",
+      "matchPackageNames": ["go"],
+      "matchCurrentValue": "/^1.x/",
+      "replacementName": "provided.",
+      "replacementVersion": "al2"
+    },
+    {
+      "description": "replace deprecated dotnetcore lambda with dotnet",
+      "matchDatasources": "custom.aws-lambda",
+      "matchPackageNames": ["dotnetcore"],
+      "replacementName": "dotnet",
+      "replacementVersion": "7"
+    },
+    {
+      "description": "pin nodejs lambda version at 18",
+      "matchDatasources": "custom.aws-lambda",
+      "matchPackageNames": ["nodejs"],
+      "allowedVersions": "<=18.x"
+    },
+    {
+      "description": "pin python lambda version at 3.11",
+      "matchDatasources": "custom.aws-lambda",
+      "matchPackageNames": ["python"],
+      "allowedVersions": "<=3.11"
+    },
+    {
+      "description": "pin java lambda version at 17",
+      "matchDatasources": "custom.aws-lambda",
+      "matchPackageNames": ["java"],
+      "allowedVersions": "<=17"
+    },
+    {
+      "description": "pin dotnet lambda version at 7",
+      "matchDatasources": "custom.aws-lambda",
+      "matchPackageNames": ["dotnet"],
+      "allowedVersions": "<=7"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Updates aws lambda Versions in custom platform appspec",
+      "fileMatch": "platform-appspec.yml",
+      "matchStrings": [
+        "runtime:\\s*(?:'|\")(?<depName>go|provided\\.|java|python|nodejs|dotnetcore|dotnet)(?<currentValue>[a-z,0-9]*.[0-9,x]*)(?:'|\")"
+      ],
+      "autoReplaceStringTemplate": "runtime: '{{depName}}{{newVersion}}'",
+      "datasourceTemplate": "custom.aws-lambda",
+      "versioningTemplate": "loose"
+    }
+  ],
+  "customDatasources": {
+    "aws-lambda": {
+      "defaultRegistryUrlTemplate": "https://endoflife.date/api/aws-lambda.json",
+      "format": "json",
+      "transformTemplates": [
+        "{ \"releases\": $append($filter($,function($v) { $contains($v.cycle,'{{packageName}}') }).{ \"version\": (latest != '' ? latest : cycle) ~> $replace('{{packageName}}',''), \"releaseTimestamp\": $toMillis(releaseDate) ~> $fromMillis(), \"isDeprecated\": eol = false ? false : $toMillis(eol) <= $toMillis($now()), \"changelogUrl\": link, \"sourceUrl\": link },[]), \"homepage\": \"https://endoflife.date/aws-lambda\" }"
+      ]
+    }
+  }
+}
